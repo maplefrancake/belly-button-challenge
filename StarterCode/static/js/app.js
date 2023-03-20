@@ -14,9 +14,29 @@ function init(){
             .text(function (d) {return d; })
             .attr("value", function (d) {return d;});
         var initSample = allGroups[0];
+        
+        // initial bar chart set up
+        var variablesList = setVariables(initSample);
+        console.log(variablesList);
+        console.log(variablesList.valuesSliced);
+        var valuesSliced = [];
+        valuesSliced = Object.values(variablesList);
+        console.log(valuesSliced);
+        var data = barChart(variablesList["valuesSliced"],variablesList["idsSliced"],variablesList["labelsSliced"]);
+        Plotly.newPlot("bar",data);
 
-        buildPlots(initSample);
-        demographics(initSample);
+        // can use the rest of the variablesList dictionary for set up/initial bubble chart
+        var data = bubbleChart(variablesList["sampleValues"],variablesList["otuIDs"],variablesList["otuLabels"]);
+        var layout = {
+            title: "Bubble Chart of Sample Values",
+            xaxis: {
+                title:"OTU IDs"
+            },
+            yaxis: {
+                title:"Sample Values"
+            }
+        };
+        Plotly.newPlot("bubble",data,layout);
     });
 };
 
@@ -30,7 +50,8 @@ function optionChanged() {
     demographics(name);
 };
 
-function buildPlots(sample) {
+function setVariables(sample) {
+    var variablesList = {};
     d3.json(url).then(function(data) {
         // need the following variables
         var samplesData = data.samples // enter dataset
@@ -43,21 +64,85 @@ function buildPlots(sample) {
         var valuesSliced = sampleValues.slice(0,10).reverse();
         var idsSliced = otuIDs.slice(0,10).reverse();
         var labelsSliced = otuLabels.slice(0.10).reverse();
+    
+        variablesList["sampleValues"] = sampleValues;
+        variablesList["otuIDs"] = (otuIDs);
+        variablesList["otuLabels"] = otuLabels;
+        variablesList["valuesSliced"] = valuesSliced;
+        variablesList["idsSliced"] = idsSliced;
+        variablesList["labelsSliced"] = labelsSliced;
+    })
+    return variablesList;
+};
+
+function barChart(valuesSliced, idsSliced, labelsSliced) {
+    console.log(valuesSliced);
+    console.log(idsSliced);
+    console.log(labelsSliced);
+    d3.json(url).then(function(data) {
+        var barchart = {
+                x:valuesSliced,
+                y:idsSliced.map(item => `OTU ${item}`),
+                type:"bar",
+                orientation: "h",
+                text: labelsSliced,
+            }
+        var bardata = [barchart];
+        return bardata;
+    })
+};
+
+function bubbleChart(sampleValues, otuIDs, otuLabels){
+    var bubblechart = {
+        x:otuIDs,
+        y:sampleValues,
+        mode:"markers",
+        text:otuLabels,
+        marker: {
+            size:sampleValues,
+            color:otuIDs
+        }
+    }
+    var bubbles = [bubblechart];
+    return bubbles;
+};
+
+function buildPlots(sample) {
+    var variablesList = setVariables(sample);
+    var valuesSliced = variablesList["valuesSliced"];
+    var idsSliced = variablesList["idsSliced"];
+    var labelsSliced = variablesList["labelsSliced"];
+    var sampleValues = variablesList["sampleValues"];
+    var otuIDs = variablesList["otuIDs"];
+    var otuLabels = variablesList["otuLabels"];
+    /* d3.json(url).then(function(data) {
+        // need the following variables
+        var samplesData = data.samples // enter dataset
+        var samplesFiltered = samplesData.filter(row => row.id == sample) // dataset filtered on selected value
+        var sampleValues = samplesFiltered[0].sample_values //selected value's Sample Values
+        var otuIDs = samplesFiltered[0].otu_ids; //selected value's otu IDs
+        var otuLabels = samplesFiltered[0].otu_labels; //selected value's otu Labels
+
+        // need to slice and reverse the above three to select the top 10 OTUs
+        var valuesSliced = sampleValues.slice(0,10).reverse();
+        var idsSliced = otuIDs.slice(0,10).reverse();
+        var labelsSliced = otuLabels.slice(0.10).reverse(); */
 
         //now that we have our variables, we need to build the plots
         // BAR CHART ------------------------------------------------------------------
-        var barchart = {
+        /* var barchart = {
             x:valuesSliced,
             y:idsSliced.map(item => `OTU ${item}`),
             type:"bar",
             orientation: "h",
             text: labelsSliced,
         };
-        var data = [barchart];
-        Plotly.newPlot("bar",data);
+        var data = [barchart]; */
+    var data = barChart(valuesSliced,idsSliced,labelsSliced);
+    Plotly.restyle("bar",data);
 
         // BUBBLE CHART ----------------------------------------------------------------
-        var bubblechart = {
+        /* var bubblechart = {
             x:otuIDs,
             y:sampleValues,
             mode:"markers",
@@ -67,19 +152,11 @@ function buildPlots(sample) {
                 color:otuIDs
             }
         };
-        var bubbles = [bubblechart];
+        var bubbles = [bubblechart]; */
         // need labels everywhere!!!
-        var layout = {
-            title: "Bubble Chart of Sample Values",
-            xaxis: {
-                title:"OTU IDs"
-            },
-            yaxis: {
-                title:"Sample Values"
-            }
-        };
-        Plotly.newPlot("bubble",bubbles,layout);
-    })
+    var data = bubbleChart(sampleValues,otuIDs,otuLabels);
+        
+    Plotly.restyle("bubble",data);
 };
 
 function demographics(sample) {
