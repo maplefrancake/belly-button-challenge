@@ -111,7 +111,8 @@ function bubbleChart(sampleValues, otuIDs, otuLabels){
         text:otuLabels,
         marker: {
             size:sampleValues,
-            color:otuIDs
+            color:otuIDs,
+            colorscale:"Picnic"
         }
     }
     var bubbles = [bubblechart];
