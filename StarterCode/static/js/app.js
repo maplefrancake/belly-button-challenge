@@ -1,3 +1,13 @@
+/* Frances Jay
+belly button challenge
+
+I've attempted to split everything out into its own function, so I can call them as need
+be instead of rewriting the same code with minor tweaks depending on if its the first time
+we're creating the charts or the 2nd, 3rd, etc time doing it. I also wanted to make sure to
+use Plotly.newPlot for the initial charts, and use Plotly.restyle for the updates. I achieved
+the same results when calling newPlot for each time, but I wanted to challenge myself to do
+this since it seems more efficient from my research. Also, it's just good practice.
+ */
 // data provided at following url
 const url= "https://2u-data-curriculum-team.s3.amazonaws.com/dataviz-classroom/v1.1/14-Interactive-Web-Visualizations/02-Homework/samples.json"
 
@@ -5,6 +15,7 @@ const url= "https://2u-data-curriculum-team.s3.amazonaws.com/dataviz-classroom/v
 function init(){
     var variablesList = {};
     d3.json(url).then(function (data) {
+        // we're setting up the dropdown button here and programatically setting the options
         var allGroups = data.names;
         d3.select("#selDataset")
             .selectAll('myOptions')
@@ -13,15 +24,17 @@ function init(){
                 .append('option')
             .text(function (d) {return d; })
             .attr("value", function (d) {return d;});
+        // we want to set up the charts initially with the default/first value in our list
         var initSample = allGroups[0];
         
         // initial bar chart set up
         variablesList = setVariables(data, initSample);
-        var data = barChart(variablesList["valuesSliced"],variablesList["idsSliced"],variablesList["labelsSliced"]);
-        Plotly.newPlot("bar",data);
+        var chartdata = barChart(variablesList["valuesSliced"],variablesList["idsSliced"],variablesList["labelsSliced"]);
+        Plotly.newPlot("bar",chartdata);
 
         // can use the rest of the variablesList dictionary for set up/initial bubble chart
-        var data = bubbleChart(variablesList["sampleValues"],variablesList["otuIDs"],variablesList["otuLabels"]);
+        var chartdata = bubbleChart(variablesList["sampleValues"],variablesList["otuIDs"],variablesList["otuLabels"]);
+        // the layout is going to stay the same through the changes, so we can set this up once
         var layout = {
             title: "Bubble Chart of Sample Values",
             xaxis: {
@@ -35,20 +48,19 @@ function init(){
                 }
             }
         }
-        Plotly.newPlot("bubble",data,layout);
+        Plotly.newPlot("bubble",chartdata,layout);
         demographics(initSample);
     });
 };
 
 //change the plot data when the input is changed on the dropdown
 function optionChanged() {
+    //select the dropdown item first before we can set the value
     let dropdown = d3.select("#selDataset");
     // need to set a variable to be the selected value from the dropdown menu
     let name = dropdown.property("value");
 
-    d3.json(url).then(function (data) {
-        buildPlots(data, name);
-    })
+    buildPlots(name);
     demographics(name);
 };
 
@@ -76,10 +88,8 @@ function setVariables(data, sample) {
     return varList;
 };
 
+// set the dictionary Plotly uses to create a chart for our bar chart
 function barChart(valuesSliced, idsSliced, labelsSliced) {
-    console.log(`bar chart ${valuesSliced}`);
-    console.log(idsSliced);
-    console.log(labelsSliced);
     var barchart = {
         x:valuesSliced,
         y:idsSliced.map(item => `OTU ${item}`),
@@ -87,10 +97,12 @@ function barChart(valuesSliced, idsSliced, labelsSliced) {
         orientation: "h",
         text: labelsSliced,
     }
+    // Plotly wants a list of dictionaries, so we need to return it as such
     var bardata = [barchart];
     return bardata;
 };
 
+// similar to barChart function, we need to set the dictionary Plotly will accept
 function bubbleChart(sampleValues, otuIDs, otuLabels){
     var bubblechart = {
         x:otuIDs,
@@ -106,22 +118,42 @@ function bubbleChart(sampleValues, otuIDs, otuLabels){
     return bubbles;
 };
 
-function buildPlots(data, sample) {
-    console.log(data);
+/* after the dropdown list changes, we'll call this to make the actual updates to our bar
+and bubble charts. we'll need to reset the variables and make a smaller dictionary
+of the things to actually change within the plot using Plotly.restyle */
+function buildPlots(sample) {
     var variablesList = {};
-    // reset our variables
-    variablesList = setVariables(data, sample);
+    d3.json(url).then(function (data) {
+        // reset our variables
+        variablesList = setVariables(data, sample);
     
-    // rebuilt the bar chart
-    var data = barChart(variablesList["valuesSliced"],variablesList["idsSliced"],variablesList["labelsSliced"]);
-    console.log(`rebuild bar data: ${data}`)
-    Plotly.restyle("bar",data);
-    
-    // rebuild the bubble chart
-    var data = bubbleChart(variablesList["sampleValues"],variablesList["otuIDs"],variablesList.otuLabels);
-    Plotly.restyle("bubble",data);
+        // rebuild the bar chart
+        var chartdata = barChart(variablesList["valuesSliced"],variablesList["idsSliced"],variablesList["labelsSliced"]);
+        // we only want to/can update some things within the chart > set those things
+        var updateData = {
+            "x":[chartdata[0].x],
+            "y":[chartdata[0].y],
+            "text":chartdata[0].text
+        }
+        Plotly.restyle("bar",updateData);
+        
+        // rebuild the bubble chart
+        var chartdata = bubbleChart(variablesList["sampleValues"],variablesList["otuIDs"],variablesList["otuLabels"]);
+        // similarly to above, we can only make updates to some things, so set those
+        var updateData = {
+            "x":[chartdata[0].x],
+            "y":[chartdata[0].y],
+            "text":chartdata[0].text,
+            "marker.size": [chartdata[0].marker.size],
+            "marker.color": [chartdata[0].marker.color]
+        }
+        Plotly.restyle("bubble",updateData);
+    });
 };
 
+/* this function changes what is displayed within the Demographics card on the site
+We're not making any updates with Plotly; it's simply updating a list of attributes about
+the data point in particular that we need to update. */
 function demographics(sample) {
     var demo = d3.select("#sample-metadata")
     d3.json(url).then(function(data){
